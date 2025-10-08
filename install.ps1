@@ -1,128 +1,118 @@
-# ==========================================
-# Windows Offline Auto Installer
-# By: sujinwo150
-# ==========================================
+# ===============================================================
+# Windows Auto Installer (Offline + Online Fallback)
+# By: sujinwo150 —  by Jay Ras
+# ===============================================================
 
-Set-ExecutionPolicy Bypass -Scope Process -Force
-
-$InstallerPath = "$PSScriptRoot\exe"
-
-Write-Host ""
-Write-Host "===========================================" -ForegroundColor Cyan
-Write-Host "  Windows Offline Installer by sujinwo150  " -ForegroundColor Cyan
+Write-Host "`n===========================================" -ForegroundColor Cyan
+Write-Host "  Windows Auto Installer by sujinwo150       " -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ------------------------------------------
-# Daftar installer offline
-# ------------------------------------------
+# --- Setup Folder dan URL ---
+$InstallerPath = Join-Path $PSScriptRoot "exe"
+if (!(Test-Path $InstallerPath)) { New-Item -ItemType Directory -Path $InstallerPath | Out-Null }
+$BaseURL = "https://raw.githubusercontent.com/sujinwo150/windows/main/exe"
+
+# --- Daftar Software ---
 $Installers = @(
-    @{ Name = "Node.js 22.20.0"; File = "node-v22.20.0-x64.msi"; Args = "/qn" },
-    @{ Name = "XAMPP 8.1.25"; File = "xampp-windows-x64-8.1.25-0-VS16-installer.exe"; Args = "--mode unattended --disable-components xampp_devdocs,xampp_perl" },
-    @{ Name = "Visual Studio Code ARM64"; File = "VSCodeUserSetup-arm64-1.104.3.exe"; Args = "/silent" },
-    @{ Name = "Composer PHP"; File = "Composer-Setup.exe"; Args = "/VERYSILENT /NORESTART" }
+    @{ Name = "Node.js"; File = "node-v22.20.0-x64.msi"; Args = "/qn"; Cmd = "node" },
+    @{ Name = "XAMPP"; File = "xampp-windows-x64-8.1.25-0-VS16-installer.exe"; Args = "--mode unattended --disable-components xampp_devdocs,xampp_perl"; Cmd = "xampp-control" },
+    @{ Name = "Visual Studio Code"; File = "VSCodeUserSetup-arm64-1.104.3.exe"; Args = "/silent"; Cmd = "code" },
+    @{ Name = "Composer"; File = "Composer-Setup.exe"; Args = "/VERYSILENT /NORESTART"; Cmd = "composer" }
 )
 
-# ------------------------------------------
-# Jalankan instalasi
-# ------------------------------------------
+# --- Fungsi: Cek apakah aplikasi sudah ada ---
+function Is-Installed($cmd) {
+    return (Get-Command $cmd -ErrorAction SilentlyContinue) -ne $null
+}
+
+# --- Fungsi: Download file jika belum ada ---
+function Download-IfMissing($fileName) {
+    $dest = Join-Path $InstallerPath $fileName
+    if (Test-Path $dest) {
+        Write-Host "✅ $fileName sudah ada, skip download." -ForegroundColor Green
+    } else {
+        $url = "$BaseURL/$fileName"
+        Write-Host "⬇️ Mengunduh $fileName ..." -ForegroundColor Cyan
+        try {
+            (New-Object System.Net.WebClient).DownloadFile($url, $dest)
+            Write-Host "✅ Berhasil diunduh: $fileName" -ForegroundColor Green
+        } catch {
+            Write-Host "❌ Gagal mengunduh $fileName dari $url" -ForegroundColor Red
+        }
+    }
+}
+
+# --- Jalankan proses utama ---
 foreach ($item in $Installers) {
     $filePath = Join-Path $InstallerPath $item.File
+    Download-IfMissing $item.File
+
+    if (Is-Installed $item.Cmd) {
+        Write-Host "✅ $($item.Name) sudah terpasang, skip instalasi." -ForegroundColor Green
+        continue
+    }
 
     if (Test-Path $filePath) {
-        Write-Host ">> Installing $($item.Name)..." -ForegroundColor Yellow
+        Write-Host "🚀 Menginstal $($item.Name) ..." -ForegroundColor Yellow
         try {
             Start-Process -FilePath $filePath -ArgumentList $item.Args -Wait -NoNewWindow
-            Write-Host "✅ Installed: $($item.Name)" -ForegroundColor Green
+            Write-Host "✅ Selesai instalasi: $($item.Name)" -ForegroundColor Green
+        } catch {
+            Write-Host "❌ Gagal menginstal $($item.Name) - $($_.Exception.Message)" -ForegroundColor Red
         }
-        catch {
-            Write-Host "❌ Failed: $($item.Name) - $($_.Exception.Message)" -ForegroundColor Red
-        }
-        Write-Host ""
+    } else {
+        Write-Host "⚠️ File tidak ditemukan: $filePath" -ForegroundColor Red
     }
-    else {
-        Write-Host "⚠️ File not found: $filePath" -ForegroundColor Red
-    }
+
+    Write-Host ""
 }
 
-# ------------------------------------------
-# Setelah VSCode terinstall → tambah extensions
-# ------------------------------------------
-Write-Host ""
-Write-Host "===========================================" -ForegroundColor Cyan
-Write-Host "  Checking & Installing VSCode Extensions  " -ForegroundColor Cyan
+# --- Instal Extensions VSCode ---
+Write-Host "`n===========================================" -ForegroundColor Cyan
+Write-Host "  Mengecek & Menginstal VSCode Extensions   " -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
 
-$codeCmd = (Get-Command "code" -ErrorAction SilentlyContinue)
-
-if ($null -eq $codeCmd) {
-    Write-Host "❌ VS Code CLI (code) belum tersedia di PATH. Restart dulu, lalu jalankan bagian extensions secara manual." -ForegroundColor Red
-    Write-Host "   Manual command: code --install-extension blackboxapp.blackbox" -ForegroundColor Yellow
-}
-else {
+if (Is-Installed "code") {
     $extensions = @(
         "blackboxapp.blackbox",
         "blackboxapp.blackboxagent",
         "ritwickdey.liveserver"
     )
 
-    $installed = code --list-extensions
-
+    $installedExt = code --list-extensions
     foreach ($ext in $extensions) {
-        if ($installed -contains $ext) {
-            Write-Host "$ext already installed ✅" -ForegroundColor Green
+        if ($installedExt -contains $ext) {
+            Write-Host "✅ $ext sudah terpasang" -ForegroundColor Green
         } else {
-            Write-Host "Installing $ext..." -ForegroundColor Cyan
+            Write-Host "⬇️ Menginstal $ext ..." -ForegroundColor Cyan
             code --install-extension $ext --force
-            Write-Host "$ext installed successfully ✅" -ForegroundColor Green
+            Write-Host "✅ $ext terpasang" -ForegroundColor Green
         }
     }
-
-    Write-Host "`nAll VSCode extensions checked and installed!" -ForegroundColor Yellow
+} else {
+    Write-Host "⚠️ VSCode belum tersedia di PATH, restart dulu lalu jalankan ulang bagian extension." -ForegroundColor Red
 }
 
-# ------------------------------------------
-# Tambahkan PATH environment (jika perlu)
-# ------------------------------------------
-$vscodePath = "C:\Users\$env:USERNAME\AppData\Local\Programs\Microsoft VS Code\bin"
-$xamppPath  = "C:\xampp"
-$nodePath   = "C:\Program Files\nodejs"
-$composerPath = "C:\ProgramData\ComposerSetup\bin"
-
-$path = [Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::Machine)
-
-foreach ($p in @($vscodePath, $xamppPath, $nodePath, $composerPath)) {
-    if (-not ($path -like "*$p*")) {
-        $path += ";$p"
-    }
-}
-
-[Environment]::SetEnvironmentVariable("Path", $path, [EnvironmentVariableTarget]::Machine)
-Write-Host "PATH updated successfully!" -ForegroundColor Green
-
-# ------------------------------------------
-# Tes versi aplikasi
-# ------------------------------------------
-Write-Host "`nChecking installed versions..." -ForegroundColor Cyan
-
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+# --- Cek versi ---
+Write-Host "`n===========================================" -ForegroundColor Cyan
+Write-Host "  Mengecek versi software yang terpasang     "
+Write-Host "===========================================" -ForegroundColor Cyan
 
 try {
     Write-Host "`nVS Code:" -ForegroundColor Yellow
-    code --version
-} catch { Write-Host "VS Code not detected!" -ForegroundColor Red }
+    code -v
+} catch { Write-Host "VS Code belum terpasang." -ForegroundColor Red }
 
 try {
     Write-Host "`nNode.js:" -ForegroundColor Yellow
     node -v
-    npm -v
-} catch { Write-Host "Node.js not detected!" -ForegroundColor Red }
+} catch { Write-Host "Node.js belum terpasang." -ForegroundColor Red }
 
 try {
     Write-Host "`nComposer:" -ForegroundColor Yellow
     composer -V
-} catch { Write-Host "Composer not detected!" -ForegroundColor Red }
+} catch { Write-Host "Composer belum terpasang." -ForegroundColor Red }
 
-Write-Host "`n=== INSTALLATION COMPLETE ===" -ForegroundColor Green
-Write-Host "VS Code, XAMPP, Node.js, and Composer installed successfully!" -ForegroundColor Cyan
-Write-Host "You may need to restart PowerShell or your PC for PATH changes to fully apply." -ForegroundColor Yellow
+Write-Host "`n=== Instalasi selesai ✅ Silakan restart komputer Anda. ===" -ForegroundColor Magenta
+pause

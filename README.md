@@ -15,4 +15,4 @@ Buka **PowerShell sebagai Administrator** lalu jalankan:
 Dan juga menginstal **VS Code extensions** seperti Blackbox AI dan Live Server.🔥
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/sujinwo150/windows/refs/heads/main/install.ps1'))
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/sujinwo150/windows/main/install.ps1'))

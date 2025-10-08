@@ -3,10 +3,8 @@
 # By: sujinwo150
 # ==========================================
 
-# Pastikan bisa jalan
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
-# Lokasi folder installer
 $InstallerPath = "$PSScriptRoot\exe"
 
 Write-Host ""
@@ -55,7 +53,6 @@ Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host "  Checking & Installing VSCode Extensions  " -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
 
-# Pastikan perintah 'code' tersedia
 $codeCmd = (Get-Command "code" -ErrorAction SilentlyContinue)
 
 if ($null -eq $codeCmd) {
@@ -63,14 +60,12 @@ if ($null -eq $codeCmd) {
     Write-Host "   Manual command: code --install-extension blackboxapp.blackbox" -ForegroundColor Yellow
 }
 else {
-    # Daftar extensions yang ingin dipasang
     $extensions = @(
         "blackboxapp.blackbox",
         "blackboxapp.blackboxagent",
         "ritwickdey.liveserver"
     )
 
-    # Ambil daftar extensions yang sudah terpasang
     $installed = code --list-extensions
 
     foreach ($ext in $extensions) {
@@ -86,39 +81,30 @@ else {
     Write-Host "`nAll VSCode extensions checked and installed!" -ForegroundColor Yellow
 }
 
-Write-Host ""
-Write-Host "===========================================" -ForegroundColor Cyan
-Write-Host "  Semua software sudah terinstall!         "
-Write-Host "  Disarankan restart komputer Anda.        "
-Write-Host "===========================================" -ForegroundColor Cyan            Write-Host "❌ Failed: $($item.Name) - $($_.Exception.Message)" -ForegroundColor Red
-        }
-        Write-Host ""
-    }
-    else {
-        Write-Host "⚠️ File not found: $filePath" -ForegroundColor Red
-    }
-}
+# ------------------------------------------
+# Tambahkan PATH environment (jika perlu)
+# ------------------------------------------
+$vscodePath = "C:\Users\$env:USERNAME\AppData\Local\Programs\Microsoft VS Code\bin"
+$xamppPath  = "C:\xampp"
+$nodePath   = "C:\Program Files\nodejs"
+$composerPath = "C:\ProgramData\ComposerSetup\bin"
 
-Write-Host "===========================================" -ForegroundColor Cyan
-Write-Host "  Semua software sudah terinstall!"
-Write-Host "  Disarankan restart komputer Anda."
-Write-Host "===========================================" -ForegroundColor Cyan$path = [Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::Machine)
+$path = [Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::Machine)
 
-# Tambah jika belum ada
 foreach ($p in @($vscodePath, $xamppPath, $nodePath, $composerPath)) {
     if (-not ($path -like "*$p*")) {
         $path += ";$p"
     }
 }
 
-# Simpan perubahan PATH
 [Environment]::SetEnvironmentVariable("Path", $path, [EnvironmentVariableTarget]::Machine)
 Write-Host "PATH updated successfully!" -ForegroundColor Green
 
-# --- Tes versi aplikasi ---
+# ------------------------------------------
+# Tes versi aplikasi
+# ------------------------------------------
 Write-Host "`nChecking installed versions..." -ForegroundColor Cyan
 
-# Refresh PATH untuk sesi PowerShell ini
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
 
 try {

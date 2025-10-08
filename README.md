@@ -12,14 +12,7 @@ Skrip ini membantu menginstal beberapa tools pengembangan di Windows:
 
 Buka **PowerShell sebagai Administrator** lalu jalankan:
 
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force
-iwr -useb https://raw.githubusercontent.com/sujinwo150/windows/refs/heads/main/win.ps1 | iex
-```
-
 Dan juga menginstal **VS Code extensions** seperti Blackbox AI dan Live Server.🔥
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force
-iwr -useb https://raw.githubusercontent.com/sujinwo150/windows/refs/heads/main/ext.ps1 | iex
-```
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/sujinwo150/windows/refs/heads/main/install.ps1'))
